@@ -287,14 +287,14 @@ CmdConfig cfgs[21] = {
 	{800, 1200, 50, 0, DIR_BACKWARD}, // BL--
 	{1200, 800, 115, 0, DIR_BACKWARD}, // BR--
 
-	{900, 1300, 50, 90, DIR_FORWARD}, // FL00 og: {900, 1300, 50, 89, DIR_FORWARD}
-	{1300, 900, 115 ,-89, DIR_FORWARD}, // FR00 og: {1800, 400, 115 ,-87, DIR_FORWARD},
+	{900, 1300, 50, 88, DIR_FORWARD}, // FL00 og: {900, 1300, 50, 89, DIR_FORWARD}
+	{1300, 900, 115 ,-90.5, DIR_FORWARD}, // FR00 og: {1800, 400, 115 ,-87, DIR_FORWARD},
 	{900, 1300, 50, -91.5, DIR_BACKWARD}, // BL00 og: {500, 1700, 50, -88, DIR_BACKWARD}
-	{1300, 900, 115, 88, DIR_BACKWARD}, // BR00,og: {1800, 500, 115, 89, DIR_BACKWARD}
+	{1300, 900, 115, 86, DIR_BACKWARD}, // BR00,og: {1800, 500, 115, 89, DIR_BACKWARD}
 
-	{800, 1800, 51.85, 88, DIR_FORWARD}, // FL20
-	{1800, 800, 115 ,-87, DIR_FORWARD}, // FR20
-	{800, 1800, 50, -89, DIR_BACKWARD}, // BL20
+	{800, 1800, 51.85, 90, DIR_FORWARD}, // FL20
+	{1800, 800, 115 ,-88, DIR_FORWARD}, // FR20
+	{800, 1800, 50, -90, DIR_BACKWARD}, // BL20
 	{1800, 800, 115, 89, DIR_BACKWARD}, // BR20,
 
 	{1500, 1500, 53, 87.5, DIR_FORWARD}, // FL30
@@ -366,6 +366,7 @@ uint16_t obsTick_IR = 0;
 
 float obsDist_IR = 0, obsDist_US = 0;
 float y_dist = 0;
+float objSize;
 //float IR_data_raw_acc = 0, dataPoint = 0;
 uint16_t dataPoint = 0; uint32_t IR_data_raw_acc = 0;
 float speedScale = 1;
@@ -1358,10 +1359,18 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 //		__ADD_COMMAND(cQueue, 1, 90);
 //		__READ_COMMAND(cQueue, curCmd, rxMsg);
 
-		__ADD_COMMAND(cQueue, 7 + step, 0);
+//		__ADD_COMMAND(cQueue, 7 + step, 0); // Task 1 turns, indoor
+//		__ADD_COMMAND(cQueue, 7 + step, 20); // Task 1 turns, outdoor
+//		__ADD_COMMAND(cQueue, 21, 2); //Second Obstacle Right
+//		__READ_COMMAND(cQueue, curCmd, rxMsg);
+//		__ADD_COMMAND(cQueue, 20, 2); //Second Obstacle Left
+		__ADD_COMMAND(cQueue, 22, step); // Test Turn
+//		__ADD_COMMAND(cQueue, 14, 20); // DT
 		__READ_COMMAND(cQueue, curCmd, rxMsg);
+//		__ADD_COMMAND(cQueue, 13, 0); // IR test
+//		__READ_COMMAND(cQueue, curCmd, rxMsg);
 
-		step = (step + 1) % 4;
+		step = (step + 1) % 5;
 //		step = (step + 1) % 7;
 //		__ADD_COMMAND(cQueue, 17, turnMode + 1);
 //		__READ_COMMAND(cQueue, curCmd, rxMsg);
@@ -1648,9 +1657,9 @@ void RobotIRMissDistanceRight(float *targetDist) {
         	__GET_ENCODER_TICK_DELTA(&htim2, lastDistTick_L, dist_dL);
         	curDistTick += dist_dL;
         	__GET_DISTANCE(curDistTick, largeDist);
-//        	if(tempDist >= 50){ //changed to 80 cuz 100 failed for left so should fail for right also
-//        		largeDist = tempDist;
-//        	}
+        	if(tempDist >= 80){ //changed to 80 cuz 100 failed for left so should fail for right also
+        		largeDist = 1;
+        	}
         	osDelay(10);
         	break;
         }
@@ -1686,9 +1695,9 @@ void RobotIRMissDistanceLeft(float *targetDist) {
         	__GET_ENCODER_TICK_DELTA(&htim2, lastDistTick_L, dist_dL);
         	curDistTick += dist_dL;
         	__GET_DISTANCE(curDistTick, largeDist);
-//        	if(tempDist >= 50){
-//        		largeDist = 1;
-//        	}
+        	if(tempDist >= 80){
+        		largeDist = 1;
+        	}
         	osDelay(10);
         	break;
         }
@@ -1713,8 +1722,11 @@ void RobotMoveUntilIRHitLeft (float * targetDist){
 	last_curTask_tick = HAL_GetTick();
 
 	do {
-		__ADC_Read_Dist(&hadc1, dataPoint, IR_data_raw_acc, obsDist_IR, obsTick_IR);
-		if(abs(obsDist_IR) < *targetDist) break;
+		__ADC_Read_Dist(&hadc2, dataPoint, IR_data_raw_acc, obsDist_IR, obsTick_IR);
+		if(abs(obsDist_IR) < *targetDist){
+			break; // Set large dist for debug
+		}
+
 
 		__SET_MOTOR_DIRECTION(1);
 	  if (HAL_GetTick() - last_curTask_tick >=10) {
@@ -1736,7 +1748,9 @@ void RobotMoveUntilIRHitRight(float * targetDist){
 
 	do {
 		__ADC_Read_Dist(&hadc1, dataPoint, IR_data_raw_acc, obsDist_IR, obsTick_IR);
-		if(abs(obsDist_IR) < *targetDist) break;
+		if(abs(obsDist_IR) < *targetDist) {
+			break;
+		}
 
 		__SET_MOTOR_DIRECTION(1);
 	  if (HAL_GetTick() - last_curTask_tick >=10) {
@@ -1784,7 +1798,7 @@ void RobotTurnFastest(float * targetAngle) {
 }
 
 void FASTESTPATH_TURN_LEFT_90() {
-	targetAngle = 27; // 49
+	targetAngle = 32; // 49
 	__SET_SERVO_TURN(&htim1, 50);
 	__SET_MOTOR_DIRECTION(1);
 	__SET_MOTOR_DUTY(&htim8, 1000, 3200);
@@ -1829,7 +1843,7 @@ void FASTESTPATH_TURN_RIGHT_ANGLE(float *) {
 void FASTESTPATH_TURN_LEFT_ANGLE(float *) {
 	__SET_SERVO_TURN(&htim1, 50);
 	__SET_MOTOR_DIRECTION(1);
-	__SET_MOTOR_DUTY(&htim8, 1000, 3200);
+	__SET_MOTOR_DUTY(&htim8, 3000, 5000);
 
 	RobotTurn(&targetAngle);
 }
@@ -1838,23 +1852,23 @@ void FASTESTPATH_TURN_RIGHT_180() {
 	targetAngle = -176;
 	__SET_SERVO_TURN(&htim1, 115);
 	__SET_MOTOR_DIRECTION(1);
-	__SET_MOTOR_DUTY(&htim8, 3000, 800);
+	__SET_MOTOR_DUTY(&htim8, 5000, 3000);
 	RobotTurn(&targetAngle);
 }
 
 void FASTESTPATH_TURN_LEFT_90X(uint8_t * turnSize) { // x3
 	__SET_MOTOR_DIRECTION(1);
 	switch (*turnSize) {
-	case 1:
-	case 3:
-		targetAngle = 83;
+	case 1: //Outdoor
+		targetAngle = 90;
 		__SET_SERVO_TURN(&htim1, 50);
-		__SET_MOTOR_DUTY(&htim8, 1000, 3500);
+		__SET_MOTOR_DUTY(&htim8, 5000, 7000);
 		break;
+	case 3: // Outdoor
 	case 4:
-	default: // Accurate
+	default: // Indoor
 		// 76 for SCSE/TR
-		targetAngle = 78;
+		targetAngle = 75;
 		__SET_SERVO_TURN(&htim1, 50);
 //		__SET_MOTOR_DUTY(&htim8, 1000, 2000);
 		__SET_MOTOR_DUTY(&htim8, 3000, 5000);
@@ -1885,6 +1899,7 @@ void FASTESTPATH_TURN_RIGHT_90X(uint8_t * turnSize) { // x3
 	RobotTurnFastest(&targetAngle);
 
 }
+
 
 void FASTESTPATH_TURN_LEFT_90X_RETURN(uint8_t * turnSize) {
 	__SET_MOTOR_DIRECTION(1);
@@ -1969,7 +1984,7 @@ void FASTESTPATH_TURN_LEFT_180X(uint8_t * turnSize) {
 //		__SET_MOTOR_DUTY(&htim8, 3500, 3000);
 //		break;
 //}
-	targetAngle = 166;
+	targetAngle = 167;
 	__SET_SERVO_TURN(&htim1, 50);
 	__SET_MOTOR_DUTY(&htim8, 3000, 5000);
 	RobotTurnFastest(&targetAngle);
@@ -2214,7 +2229,8 @@ void runADCTask(void *argument)
 //			osDelay(1000);
 //			RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_1);
 //			osDelay(10);
-		  targetDist = 30;
+		  sprintf(aRxBuffer, sizeof(aRxBuffer), "IR"); //for db
+		  targetDist = 60;
 		  //RobotIRMissDistanceRight(&targetDist);
 		  //RobotIRMissDistanceLeft(&targetDist);
 		  RobotMoveUntilIRHitLeft(&targetDist);
@@ -2222,7 +2238,7 @@ void runADCTask(void *argument)
 //		  if(largeDist){
 //			  RobotMoveDist(&tempDist, DIR_BACKWARD, SPEED_MODE_1);
 //		  }
-		  RobotMoveDist(&tempDist, DIR_BACKWARD, SPEED_MODE_1);
+		  //RobotMoveDist(&tempDist, DIR_BACKWARD, SPEED_MODE_1);
 
 //			do {
 //				__ADC_Read_Dist(&hadc1, dataPoint, IR_data_raw_acc, obsDist_IR, obsTick_IR);
@@ -2499,13 +2515,13 @@ void runFLTask(void *argument)
 			  osDelay(10);
 			  break;
 		  case 20: // FL20 (outdoor 3x1)
-			  targetDist = 8.5;
+			  targetDist = 7;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_FL20], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  osDelay(10);
-			  targetDist = 2.3;
+			  targetDist = 2.4;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
 			  osDelay(10);
 			  break;
@@ -2517,14 +2533,14 @@ void runFLTask(void *argument)
 //			  RobotTurn(&targetAngle);
 
 			  //original:
-			  targetDist = 8;
+			  targetDist = 8.9; //side displacement
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);//og speedmode 1
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_FL00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  //RobotTurnFastest(&targetAngle);
 			  osDelay(10);
-			  targetDist = 3;
+			  targetDist = 3;  //back and forth
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);//speedmodeT
 			  osDelay(10);
 			  break;
@@ -2573,14 +2589,14 @@ void runFRTask(void *argument)
 			  osDelay(10);
 			  break;
 		  case 20: // FR20 (outdoor 3x1)
-			  targetDist = 3.5;
+			  targetDist = 7.5;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_FR20], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  osDelay(10);
-			  targetDist = 0.5;
-			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_1);
+			  targetDist = 1.9;
+			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
 			  osDelay(10);
 			  break;
 		  default: // FR00 (indoor 3x1)
@@ -2591,7 +2607,7 @@ void runFRTask(void *argument)
 			  RobotTurn(&targetAngle);
 			  //RobotTurnFastest(&targetAngle);
 			  osDelay(10);
-			  targetDist = 3;
+			  targetDist = 3.1;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
 			  osDelay(10);
 			  break;
@@ -2639,13 +2655,13 @@ void runBLTask(void *argument)
 			  osDelay(10);
 			  break;
 		  case 20: // BL20 (outdoor 3x1)
-			  targetDist = 2;
-			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
+			  targetDist = 2.6;
+			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BL20], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  osDelay(10);
-			  targetDist = 5.5;
+			  targetDist = 8;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
@@ -2657,14 +2673,14 @@ void runBLTask(void *argument)
 			  break;
 
 		  default: // BL00 (indoor 3x1)
-			  targetDist = 2.5;
+			  targetDist = 3.1;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);//og T
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BL00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  //RobotTurnFastest(&targetAngle);
 			  osDelay(10);
-			  targetDist = 9.1;
+			  targetDist = 8.7;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);//og T
 			  osDelay(10);
 			  break;
@@ -2712,13 +2728,13 @@ void runBRTask(void *argument)
 			  osDelay(10);
 			  break;
 		  case 20: // BR20 (outdoor 3x1)
-			  targetDist = 0.5;
+			  targetDist = 3.7;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BR20], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  osDelay(10);
-			  targetDist = 6.7;
+			  targetDist = 8.8;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
@@ -2729,14 +2745,14 @@ void runBRTask(void *argument)
 			  break;
 
 		  default: // BR00 (indoor 3x1)
-			  targetDist = 4.5;
+			  targetDist = 3.4;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BR00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  //RobotTurnFastest(&targetAngle);
 			  osDelay(10);
-			  targetDist = 8;
+			  targetDist = 8.2;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
@@ -2966,16 +2982,32 @@ void StartFastestLeft(void *argument)
 //		  FASTESTPATH_TURN_LEFT_90(); // Turn back to center line
 //		  osDelay(10);
 
-		  FASTESTPATH_TURN_LEFT_90();
-		  targetDist = 28;
+		  //Turn left
+		  //FASTESTPATH_TURN_LEFT_90();
+		  targetAngle = 30;
+		  FASTESTPATH_TURN_LEFT_ANGLE(&targetAngle);
+
+		  // Go straight
+		  targetDist = 19;
 		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-		  FASTESTPATH_TURN_RIGHT_90();
+
+		  // Turn Right
+		  //FASTESTPATH_TURN_RIGHT_90();
+		  targetAngle = -27;
+		  FASTESTPATH_TURN_RIGHT_ANGLE(&targetAngle);
 		  osDelay(10);
 
-		  FASTESTPATH_TURN_RIGHT();
-		  targetDist = 20;
+		  //Turn Right
+		  targetAngle = -39;
+		  FASTESTPATH_TURN_RIGHT_ANGLE(&targetAngle);
+
+		  // Nove Straight
+		  targetDist = 18;
 		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-		  FASTESTPATH_TURN_LEFT_90();
+
+		  // Turn left to centralise infront of second obstacle
+		  targetAngle = 21;
+		  FASTESTPATH_TURN_LEFT_ANGLE(&targetAngle);
 		  osDelay(10);
 
 
@@ -3053,7 +3085,7 @@ void StartFastestRight(void *argument)
 			 osDelay(10);
 
 			 FASTESTPATH_TURN_LEFT();//turn 37
-			 targetDist = 27;
+			 targetDist = 33;
 			 RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
 			 FASTESTPATH_TURN_RIGHT_90();
 			 osDelay(10);
@@ -3134,11 +3166,11 @@ void StartSecondLeft(void *argument)
 {
   /* USER CODE BEGIN StartSecondLeft */
 	const float FL_Offset_Y = 1.5;
-	const float EDGE_OVERSHOOT = 5;
+	const float EDGE_OVERSHOOT = 10;
 	const float AFTER_U = 29;
 	const float DIST_FROM_OBJECT = 18.5;
 	const float TURN_SIDE_DIS = 52;
-	const float SENSE_DIST = 26.5;
+	const float SENSE_DIST = 45;
 	uint8_t turnSize = 2;
 	uint8_t speedModeFP = SPEED_MODE_1;
 	char command[] = "ACK\r\n";
@@ -3149,15 +3181,29 @@ void StartSecondLeft(void *argument)
 		if(curTask != TASK_SECOND_LEFT) osDelay(1000);
 		else
 		{
+			objSize = 0;
+			largeDist = 0;
 			turnSize = curCmd.val;
 
 			//Turn Left
 			FASTESTPATH_TURN_LEFT_90X(&turnSize);
 			osDelay(10);
 
-			//Move to End of Obstacle
+			/*Check if robot still beside obstacle after turning*/
+
+			//targetDist for IR
 			targetDist = 40; //og 30
-			RobotMoveUntilIRmissRight(&targetDist);
+
+			//Read IR value
+			__ADC_Read_Dist(&hadc2, dataPoint, IR_data_raw_acc, obsDist_IR, obsTick_IR);
+
+			//Check if IR reading less than target distance (Robot still beside obstacle)
+			if(abs(obsDist_IR) < targetDist)
+			{
+				//Carry On with RobotMoveUntilMiss
+				//Move to End of Obstacle
+				RobotMoveUntilIRmissRight(&targetDist);
+			}
 
 			//U-Turn
 			FASTESTPATH_TURN_RIGHT_180X(&turnSize);
@@ -3172,7 +3218,7 @@ void StartSecondLeft(void *argument)
 			FASTESTPATH_TURN_RIGHT_90X(&turnSize);
 
 			//Calculate obj size
-			float objSize = AFTER_U + largeDist - EDGE_OVERSHOOT;
+			objSize = AFTER_U + largeDist - EDGE_OVERSHOOT;
 			float centerDistAftTurn = (objSize / 2) + DIST_FROM_OBJECT - TURN_SIDE_DIS;
 
 			FASTESTPATH_TURN_RIGHT_90X(&turnSize);
@@ -3193,6 +3239,8 @@ void StartSecondLeft(void *argument)
 //			 * */
 //
 			//Move until 1st Obstacle is Detected
+			targetDist = 15;
+			RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
 			targetDist = 60;
 			RobotMoveUntilIRHitRight(&targetDist);
 			osDelay(10);
@@ -3206,10 +3254,10 @@ void StartSecondLeft(void *argument)
 			RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
 			FASTESTPATH_TURN_LEFT_90X(&turnSize);
 //
-			 //Go to Home
-			 targetDist = 20;
-			 RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
-			 osDelay(10);
+//			 //Go to Home
+//			 targetDist = 20;
+//			 RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+//			 osDelay(10);
 
 
 			clickOnce = 0;
@@ -3245,7 +3293,7 @@ void StartSecondRight(void *argument)
 	const float AFTER_U = 29.5;
 	const float DIST_FROM_OBJECT = 22;
 	const float TURN_SIDE_DIS = 53;
-	const float SENSE_DIST = 26.5;
+	const float SENSE_DIST = 35; // How far from centre to measure obstacle
 	uint8_t turnSize = 2;
 	uint8_t speedModeFP = SPEED_MODE_1;
 	char command[] = "ACK\r\n";
@@ -3256,6 +3304,8 @@ void StartSecondRight(void *argument)
 	  if(curTask != TASK_SECOND_RIGHT) osDelay(1000);
 	  else
 	  {
+		  	 largeDist = 0;
+		  	 objSize = 0;
 			turnSize = curCmd.val;
 
 			//Turn Left
@@ -3278,7 +3328,7 @@ void StartSecondRight(void *argument)
 			FASTESTPATH_TURN_LEFT_90X(&turnSize);
 
 			//Calculate obj size
-			float objSize = AFTER_U + largeDist - EDGE_OVERSHOOT;
+			objSize = AFTER_U + largeDist - EDGE_OVERSHOOT;
 			float centerDistAftTurn = (objSize / 2) + DIST_FROM_OBJECT - TURN_SIDE_DIS;
 
 			if (centerDistAftTurn < SENSE_DIST){
@@ -3290,28 +3340,33 @@ void StartSecondRight(void *argument)
 //
 //			if(largeDist) {
 //				FASTESTPATH_TURN_LEFT_90X(&turnSize);
-//				targetDist = 10;
+//				targetDist = SENSE_DIST - centerDistAftTurn;
 //				RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
-//				turnSize = 3;
+//				//turnSize = 3;
 //				FASTESTPATH_TURN_RIGHT_90X(&turnSize);
 //			}
 //
+			targetDist = 15;
+			RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
 			//Move until 1st Obstacle is Detected
 			targetDist = 60;
 			RobotMoveUntilIRHitLeft(&targetDist);
 			targetDist = 15;
 			RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_1); //sp1
+			targetDist = 15;
+			RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_1); //sp1
+			osDelay(10);
 
 			// Turn right and turn left to align to enter home
 			FASTESTPATH_TURN_LEFT_90X(&turnSize);
 			targetDist = TURN_SIDE_DIS - SENSE_DIST;
 			RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
 			FASTESTPATH_TURN_RIGHT_90X(&turnSize);
-//
-			 //Go to Home
-			 targetDist = 20;
-			 RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
-			 osDelay(10);
+////
+//			 //Go to Home
+//			 targetDist = 20;
+//			 RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+//			 osDelay(10);
 
 			clickOnce = 0;
 			prevTask = curTask;
@@ -3413,7 +3468,8 @@ void oledShow(void *argument)
 //	OLED_ShowString(0, 36, (char *) ch);
 //	snprintf(ch, sizeof(ch), "IR: %-4d", (int) obsDist_IR); // IR
 //	OLED_ShowString(0, 36, (char *) ch);
-	snprintf(ch, sizeof(ch), "O Dist:%-4d", (int) largeDist); // Angle
+//	snprintf(ch, sizeof(ch), "objSize:%-4d", (int) objSize); // FP 2nd turn ObSize
+	snprintf(ch, sizeof(ch), "US:%-4d", (int) obsDist_US);
 	OLED_ShowString(0, 36, (char *) ch);
 	OLED_ShowString(0, 48, (char *) rxMsg);
 	//snprintf(ch, sizeof(ch), "cmd:%-4d",(int) curCmd.val);
