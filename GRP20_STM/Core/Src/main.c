@@ -2969,26 +2969,13 @@ void StartFastestLeft(void *argument)
 		  		break;
 		  }
 
-//		  FASTESTPATH_TURN_LEFT();
-//		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-//
-//		  FASTESTPATH_TURN_RIGHT();
-//		  osDelay(10);
-//		  FASTESTPATH_TURN_RIGHT_90();
-//		  osDelay(10);
-//		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-
-
-//		  FASTESTPATH_TURN_LEFT_90(); // Turn back to center line
-//		  osDelay(10);
-
 		  //Turn left
 		  //FASTESTPATH_TURN_LEFT_90();
 		  targetAngle = 30;
 		  FASTESTPATH_TURN_LEFT_ANGLE(&targetAngle);
 
 		  // Go straight
-		  targetDist = 19;
+		  targetDist = 22;
 		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
 
 		  // Turn Right
@@ -3002,11 +2989,11 @@ void StartFastestLeft(void *argument)
 		  FASTESTPATH_TURN_RIGHT_ANGLE(&targetAngle);
 
 		  // Nove Straight
-		  targetDist = 18;
+		  targetDist = 12;
 		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
 
 		  // Turn left to centralise infront of second obstacle
-		  targetAngle = 21;
+		  targetAngle = 41;
 		  FASTESTPATH_TURN_LEFT_ANGLE(&targetAngle);
 		  osDelay(10);
 
@@ -3069,27 +3056,33 @@ void StartFastestRight(void *argument)
 	  		  		break;
 	  		  }
 
-//	  		FASTESTPATH_TURN_RIGHT();
-//	  		RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-//	  		FASTESTPATH_TURN_LEFT_90();
-//	  		osDelay(10);
-//	  		RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-//
-//	  		FASTESTPATH_TURN_RIGHT(); // Turn back to center line
-//	  		osDelay(10);
+//		// New version
+	  	//Turn Right
+		 targetAngle = -30;
+		  FASTESTPATH_TURN_RIGHT_ANGLE(&targetAngle);
 
-	  		FASTESTPATH_TURN_RIGHT_90();
-			 targetDist = 27;
-			 RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-			 FASTESTPATH_TURN_LEFT_90();
-			 osDelay(10);
+		  // Go straight
+		  targetDist = 12;
+		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
 
-			 FASTESTPATH_TURN_LEFT();//turn 37
-			 targetDist = 33;
-			 RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-			 FASTESTPATH_TURN_RIGHT_90();
-			 osDelay(10);
+		  // Turn Left
+		  //FASTESTPATH_TURN_RIGHT_90();
+		  targetAngle = 27;
+		  FASTESTPATH_TURN_LEFT_ANGLE(&targetAngle);
+		  osDelay(10);
 
+		  //Turn Left somemore
+		  targetAngle = 45;
+		  FASTESTPATH_TURN_LEFT_ANGLE(&targetAngle);
+
+		  // Nove Straight
+		  targetDist = 3;
+		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+
+		  // Turn right to centralise infront of second obstacle
+		  targetAngle = -38;
+		  FASTESTPATH_TURN_RIGHT_ANGLE(&targetAngle);
+		  osDelay(10);
 
 	  		  clickOnce = 0;
 	  		  prevTask = curTask;
@@ -3241,7 +3234,7 @@ void StartSecondLeft(void *argument)
 			//Move until 1st Obstacle is Detected
 			targetDist = 15;
 			RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
-			targetDist = 60;
+			targetDist = 80;
 			RobotMoveUntilIRHitRight(&targetDist);
 			osDelay(10);
 			targetDist = 15;
@@ -3250,14 +3243,14 @@ void StartSecondLeft(void *argument)
 //
 //			// Turn right and turn left to align to enter home
 			FASTESTPATH_TURN_RIGHT_90X(&turnSize);
-			targetDist = TURN_SIDE_DIS - SENSE_DIST;
+			targetDist = abs(obsDist_IR + 10 - TURN_SIDE_DIS);
 			RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
 			FASTESTPATH_TURN_LEFT_90X(&turnSize);
 //
-//			 //Go to Home
-//			 targetDist = 20;
-//			 RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
-//			 osDelay(10);
+			 //Go to Home
+			 targetDist = 20;
+			 RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+			 osDelay(10);
 
 
 			clickOnce = 0;
@@ -3306,7 +3299,7 @@ void StartSecondRight(void *argument)
 	  {
 		  	 largeDist = 0;
 		  	 objSize = 0;
-			turnSize = curCmd.val;
+			turnSize = curCmd.val; // 1 for indoor, 2 for outdoor
 
 			//Turn Left
 			FASTESTPATH_TURN_RIGHT_90X(&turnSize);
@@ -3359,7 +3352,7 @@ void StartSecondRight(void *argument)
 
 			// Turn right and turn left to align to enter home
 			FASTESTPATH_TURN_LEFT_90X(&turnSize);
-			targetDist = TURN_SIDE_DIS - SENSE_DIST;
+			targetDist = abs(obsDist_IR + 10 - TURN_SIDE_DIS);
 			RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_1);
 			FASTESTPATH_TURN_RIGHT_90X(&turnSize);
 ////
@@ -3466,10 +3459,10 @@ void oledShow(void *argument)
 	OLED_ShowString(0, 12, (char *) ch);
 //	snprintf(ch, sizeof(ch), "angle:%-4d", (int) angleNow); // Angle
 //	OLED_ShowString(0, 36, (char *) ch);
-//	snprintf(ch, sizeof(ch), "IR: %-4d", (int) obsDist_IR); // IR
+	snprintf(ch, sizeof(ch), "IR: %-4d", (int) obsDist_IR); // IR
 //	OLED_ShowString(0, 36, (char *) ch);
 //	snprintf(ch, sizeof(ch), "objSize:%-4d", (int) objSize); // FP 2nd turn ObSize
-	snprintf(ch, sizeof(ch), "US:%-4d", (int) obsDist_US);
+//	snprintf(ch, sizeof(ch), "US:%-4d", (int) obsDist_US);
 	OLED_ShowString(0, 36, (char *) ch);
 	OLED_ShowString(0, 48, (char *) rxMsg);
 	//snprintf(ch, sizeof(ch), "cmd:%-4d",(int) curCmd.val);
